@@ -1,0 +1,2 @@
+var d = $feature.time;
+return IIF(IsEmpty(d), null, Text(d, "HH:mm"));
