@@ -1,0 +1,14 @@
+var d = $feature.date;               
+var t = Trim(DefaultValue($feature.time_txt, ""));  
+if (IsEmpty(d) || t == "") return null;
+
+// Parse time
+var hms = Split(t, ":");
+if (Count(hms) < 2) return null;
+
+var hh = Number(hms[0]);
+var mm = Number(hms[1]);
+var ss = IIF(Count(hms) >= 3, Number(hms[2]), 0);
+
+// Build combined datetime
+return Date(Year(d), Month(d), Day(d), hh, mm, ss);
