@@ -1,0 +1,188 @@
+---
+title: 'Lab #10'
+output: html_document
+date: "April 2, 2025"
+---
+
+## Introduction
+
+In today's lab, we'll be using data from the U.S. Census Bureau on housing, income, and migration. I've prepared county-level data and data on "Census Places" (towns, cities, and other developed areas) from two surveys:
+
+- The American Community Survey (ACS) 5-year summary for 2017
+- The American Community Survey (ACS) 5-year summary for 2021
+
+The ACS is conducted more frequently than the decennial census, allowing for more frequent studies of how communities are changing. However, they are less accurate than the decennial census because they use only a small sample from each enumeration area.
+
+**Some other things you should consider when interpreting these data:**
+
+- The 5-year ACS is an average of small samples over a 5-year period, centered on the report year: the "2017" ACS includes data from 2015-2019 and the "2021" ACS includes data from 2019-2023.
+- The Place-based estimates aggregate over potentially large areas; for example, there is a single median home sale price for all of Missoula.
+
+**For these reasons, when comparing ACS estimates over time, we tend to get results that underestimate the magnitude of change** (essentially, the data are smoothed). If we were really interested in studying change over multiple cities, we should use decennial Census data. If we were interested in studying change in a specific place (like Missoula), we should probably use finer-scale data, like data at the level of Census tracts or block groups.
+
+### Data Dictionary
+
+**The `df.housing` data frame** includes the following fields:
+
+- `name` - Name of the city/ Census Place
+- `year` - Year of the survey, either `"Y2017"` or `"Y2021"`
+- `housing.units` - Total number of housing units (of any kind)
+- `housing.units.occupied` - Number of housing units occupied (part of `housing.units` total)
+- `housing.units.owner.occ` - Number of housing units that are owner-occupied (part of `housing.units.occupied` total)
+- `housing.units.renter.occ` - Number of housing units that are renter-occupied (part of `housing.units.occupied` total)
+- `median.year.built` - Across all housing units, the median year of construction
+- `median.value.2021.USD` - The median home sale value (in 2021 dollars)
+- `median.gross.rent.2021.USD` - The median gross rent value (in 2021 dollars)
+- `median.gross.rent.as.pct` - Across all reported gross rents as percentages of the respective household income, the median value (in 2021 dollars)
+- `vacant.units` - Total number of vacant housing units
+- `vacant.units.for.rent` - Total number of vacant housing units listed for rent (part of `vacant.units` total)
+- `vacant.units.for.sale` - Total number of vacant housing units listed for sale (part of `vacant.units` total)
+- `housing.single` - Number of single-family housing units (part of `housing.units` total)
+- `housing.duplex` - Number of duplexes (part of `housing.units` total)
+- `housing.triplex.fourplex` - Number of triplexes and fourplexes (part of `housing.units` total)
+- `housing.mobile.home` - Number of mobile homes (part of `housing.units` total)
+- `housing.multifamily` - Number of multi-family housing units (i.e., apartment complexes, part of `housing.units` total)
+
+**And in the `df.income` data frame,** in addition to the `name` and `year` columns that are the same:
+
+- `pop.total` - Total population
+- `households` - Total number of households
+- `median.household.income.2021.USD` - Median household income, adjusted to 2021 dollars
+- `median.renter.household.income.2021.USD` - Median household income among renter households (in 2021 dollars)
+- `median.owner.household.income.2021.USD` - Median household income among non-renter households (in 2021 dollars)
+
+**And in the `df.migration` data frame:**
+
+- `state.code` - Two letter U.S. state code, [see reference](https://en.wikipedia.org/wiki/List_of_U.S._state_and_territory_abbreviations#ANSI_standard_INCITS_38:2009)
+- `county.current` - Current county of residence (within state indicated by `state.code`)
+- `total.asked` - Total number of people 1 year or older
+- `total.same.house` - Total number of people who were in the same house 1 year ago
+- `total.moved.within.county` - Total number of people who moved within the same county, within last year
+- `total.moved.within.state` - Total number of people who moved within the same state, within last year
+- `total.moved.from.other.state` - Total number of people who moved from another state, within last year
+- `total.moved.from.abroad` - Total number of people who moved from abroad, within last year
+
+### Terminology
+
+**"Gross rent"** refers to the combined cost of rent and utilities.
+
+When a household is paying 30% or more of its income toward (gross) rent, we would describe that household as **rent-burdened.** Rent-burdened households may have difficulty paying for food, health care, or other important things, because so much of their income is being spent on housing.
+
+### Loading the Data
+
+```{r}
+library(dplyr, warn.conflicts = F)
+library(stringr)
+
+df.housing <- read.csv('http://files.ntsg.umt.edu/data/GIS_Programming/data/Census_ACS_Montana_housing_2017-2021_in_2021_dollars.csv') %>%
+  mutate(year = sprintf('Y%d', year))
+df.income <- read.csv('http://files.ntsg.umt.edu/data/GIS_Programming/data/Census_ACS_Montana_income_2017-2021_in_2021_dollars.csv') %>%
+  mutate(year = sprintf('Y%d', year))
+df.migration <- read.csv('http://files.ntsg.umt.edu/data/GIS_Programming/data/Census_ACS_Montana_migration_2021.csv')
+```
+
+
+---
+
+## Problem 10.1 - Median Gross Rent in Missoula in 2021?
+
+Write a `dplyr` pipeline that returns a single data frame row to answer the question: What was the median gross rent in Missoula in 2021?
+
+- The result should have only three columns: the name of the City, the year, and the median gross rent (in 2021 USD).
+
+**Hint:** You're going to have to figure out what is Missoula's exact name in this table. In Python, we could search for sub-strings using something like:
+
+```python
+"Missoula" in name
+```
+
+Unfortunately, we can't do that with R. Instead, we need to use the `str_detect()` function from the `stringr` library. The first argument is a string we want to search and the second argument is the sub-string we want to find.
+
+```{r}
+library(stringr)
+
+str_detect('Miss-oo-lala', 'Miss')
+```
+
+```{r}
+str_detect('Miss-oo-lala', 'oops')
+```
+
+
+---
+
+## Problem 10.2 - Occupancy Rates
+
+Write a `dplyr` pipeline that computes the owner-occupancy and rental vacancy rates in Missoula.
+
+- The owner-occupancy rate is the number of owner-occupied housing units as a percentage (%) of the total number of housing units.
+- The rental vacancy rate is the number of vacant rental units as a percentage (%) of the total number of housing units.
+
+*Your output table should show (only) the* `name`, `year`, *and these two rates.*
+
+
+---
+
+## Problem 10.3 - Fastest Growth in Housing Prices
+
+Where did housing prices increase the most, in Montana, between 2017 and 2021? Write a `dplyr` pipeline to answer this question.
+
+1. First, remove any Places that have `"CDP"` in their name. These "Census Designated Places" are not incorporated towns or cities, so they're hard to study.
+2. Calculate change in housing prices as a percentage (I have a written a function for you to do this):
+$$
+\Delta\text{Price}_{\%} = 100\times\frac{\text{Price}_{2021} - \text{Price}_{2017}}{\text{Price}_{2017}}
+$$
+3. Order the rows of the output data frame from largest change to smallest.
+4. You should have only one row per Census Place (town or city).
+
+**I have written a percent-change function for you, below.** (You can use any R expression, including calling a function on a column, within a `mutate()` step.) **This function will only work if the rows of your data frame are ordered by `year`!**
+
+```{r}
+pct.change <- function (values) {
+  # Subtract the second year (2021) from the first year (2017), divide by first year's value
+  100 * ((values[2] - values[1]) / values[1])
+}
+```
+
+
+---
+
+## Problem 10.4 - Direction of Change
+
+**Starting from the solution to the previous problem,** count how many Census Places experienced an increase in housing prices and how many experienced a decrease.
+
+**Hint:** You can use `if_else()` within a `mutate()` step to convert a numeric column to a categorical column. For example:
+
+```{r}
+df.housing %>%
+  select(name, median.gross.rent.as.pct) %>%
+  mutate(Category = if_else(median.gross.rent.as.pct > 30, 'Burdened', 'Not Burdened')) %>%
+  group_by(Category) %>%
+  tally()
+```
+
+
+--- 
+
+## Problem 10.5 - New Arrivals
+
+1. **What are the top 6 states with the greatest number of new arrivals (people moving from out of the state or from abroad)?**
+2. **What about the top 6 states with the greatest percentage of its population having recently arrived from out of state or abroad?**
+
+Write a `dplyr` pipeline to answer *each* of these questions. Consider:
+
+- The `head()` function will show the first 6 rows of a data frame.
+- Only functions that aggregate values (i.e., generate exactly one value for multiple input values) should be used in a `summarize()` step! 
+- Your pipeline should not generate any Warnings (this can happen if you use `summarize()` in the wrong way).
+- Question 2 builds on Question 1!
+
+
+---
+
+## Extra Challenges
+
+- Based on the solution to Problem 10.4... **Did median gross rent or the median household income of renters change faster over this period?** If rent increased faster than the income of renters, then renters will be paying a greater share of their income towards rent in 2021 than they did in 2017. This means there will be an increase in the share of households that are rent-burdened. Conversely, if income increased faster than rent, then there may be fewer households that are rent-burdened.
+
+- Based on the solution to Problem 10.4... You can also calculate whether or not the median household is rent-burdened; i.e., if median (annual) gross rent is divided by median (annual) income, you obtain the portion of income that is spent on rent. Remember that `median.gross.rent.2021.USD` is a monthly quantity but `median.renter.household.income.2021.USD` is an annual quantity!
+  
+- In how many Census Places in Montana are at least half of the renters experiencing rent burden as of 2021?
