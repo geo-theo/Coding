@@ -1,0 +1,154 @@
+---
+title: 'Lab #11'
+output: html_document
+date: "April 8, 2026"
+---
+
+In this lab, we'll use data on traffic fatalities from [the National Highway Traffic Safety Administration (NHTSA)](https://cdan.dot.gov/) and from [the World Health Organization.](https://www.who.int/data/gho/data/indicators/indicator-details/GHO/estimated-road-traffic-death-rate-(per-100-000-population))
+
+**Install the required libraries:**
+
+- `install.packages(c('dplyr', 'tidyr', 'ggplot2', 'gapminder'))`
+
+```{r}
+library(dplyr, warn.conflicts = FALSE)
+library(tidyr)
+library(ggplot2)
+options(stringsAsFactors = FALSE)
+
+MONTHS = c('January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December')
+```
+
+
+## About the Pedestrian Data
+
+`sidewalks` - This column indicates whether sidewalks were present where the accident occurred.
+
+- `na` indicates that sidewalk status wasn't filled out that year (this item was only recorded starting in 2014)
+- `none` indicates that *sidewalks were not noted* (we'll assume this means there was no sidewalk)
+- `yes` indicates sidewalks were present
+- `unknown` indicates that it is not known if sidewalks were present
+
+`speeding` - This column indicates whether the vehicle(s) involved were speeding.
+
+```{r}
+df.ped <- read.csv('http://files.ntsg.umt.edu/data/GIS_Programming/data/NHTSA_FIRST_pedestrians_in_fatal_crashes.csv', skip = 1) %>%
+  pivot_longer(!(year:month), names_to = c('sidewalks', 'speeding'), values_to = 'count', names_sep = '_') %>%
+  filter(month != 'Total') %>%
+  mutate(month = ordered(month, levels = MONTHS))
+head(df.ped)
+```
+
+
+## About the Pedalcyclist Data
+
+Traffic wonks sometimes refer to cyclists as "pedalcyclists."
+
+```{r}
+df.bike <- read.csv('http://files.ntsg.umt.edu/data/GIS_Programming/data/NHTSA_FIRST_pedalcyclists_in_fatal_crashes.csv', skip = 1) %>%
+  pivot_longer(!(year:month), names_to = c('bike.location', 'road.type'), values_to = 'count', names_sep = '_') %>%
+  filter(month != 'Total') %>%
+  mutate(month = ordered(month, levels = MONTHS))
+head(df.bike)
+```
+
+
+## About the Global Data on Traffic Fatalities
+
+These data were downloaded directly from [the World Health Organization's website.](https://www.who.int/data/gho/data/indicators/indicator-details/GHO/estimated-road-traffic-death-rate-(per-100-000-population) They describe the estimate number of traffic fatalities (including motorists, pedestrians, and cyclists) per 100,000 people.
+
+```{r}
+df.global <- read.csv('http://files.ntsg.umt.edu/data/GIS_Programming/data/WHO_traffic_fatalities_by_year.csv') %>% 
+  select(Indicator, Region = ParentLocation, Location, Year = Period, Deaths.Per.100k = FactValueNumeric)
+head(df.global)
+```
+
+---
+
+## Problem 11.1 - Reshaping Tables
+
+Write a pipeline that reshapes `df.ped` so that is shows the count of pedestrians killed in motor vehicle accidents, **where sidewalks are *not* present and *regardless* of whether speeding was a factor,** with years **2014 and later** along the rows and months along the columns; i.e., the table should look something like this:
+
+```
+        January    February    March ...
+2014
+2015
+2016
+...
+```
+
+
+---
+
+## Problem 11.2 - Cyclist Fatalities by Year and Location
+
+Create a bar/column plot showing the number of cyclist fatalities in each year *for each location where the cyclist was killed.* A stacked bar/column plot is recommended, but you can also use dodged bars or multiple plots, if you prefer, **provided that you write a single `dplyr` pipeline and use a single `ggplot()` function.**
+
+Note that while `bike.location` was not reported until 2014, you should show all years of the data.
+
+
+---
+
+## Problem 11.3 - Fatalities by Year
+
+Using a single `ggplot()`, create a line plot showing Pedestrian and Pedalcyclist fatalities in each year.
+
+- You should use faceting to create separate plots for Pedestrian and Pedalcyclist fatalities.
+- You will probably need to *join* one data frame to another to achieve this.
+
+**Hint:** Faceting is easier if your data frame is longer than it is wide; i.e., if there is a column that distinguishes between the groups of data you want to show in each facet. You may need to reshape the data frame, after joining.
+
+
+---
+
+## Interlude
+
+Here's an intersting finding from the WHO data. If we normalize the number of traffic fatalities by its value in the year 2000 (i.e., the values become *relative* to the value in 2000), we can examine how the number of traffic fatalities changes over time. It looks like fatalities have declined quickly in Europe over the past two decades, but generally increased in most of the rest of the world.
+
+```{r}
+df.global %>%
+  group_by(Location) %>%
+  arrange(Location, Year) %>%
+  mutate(Deaths.Normalized = Deaths.Per.100k / Deaths.Per.100k[1]) %>%
+  group_by(Year, Region) %>%
+  summarize(Deaths.Normalized = mean(Deaths.Normalized)) %>%
+ggplot(aes(x = Year, y = Deaths.Normalized)) +
+  geom_line(aes(color = Region)) +
+  scale_y_continuous(labels = scales::percent) +
+  theme_minimal()
+```
+
+
+---
+
+## Problem 11.4 - Global Traffic Fatalities
+
+The "gapminder" dataset (loaded below) includes country-level data every 5 years up to 2007 on:
+
+- Life expectancy: `lifeExp`
+- Population: `pop`
+- Per-capita gross domestic product (GDP): `gdpPercap`
+
+```{r}
+library('gapminder')
+df.gapminder <- gapminder %>%
+  mutate(country = as.character(country),
+    continent = as.character(continent)) %>% 
+  mutate(country = if_else(country == 'United States', 'United States of America', country))
+head(df.gapminder)
+```
+
+**Is there a relationship between per-capita GDP and traffic fatalities? Create a scatterplot that answers this question.**
+
+- Use `df.global` (the WHO dataset) and `df.gapminder`. Do not use `gapminder`.
+- Use only data from 2007 (latest year of overlap between the two datasets)
+- Color the points of the scatterplot according to the `continent`
+- Use a base-10 logarithmic scale for the x-axis: `scale_x_log()`
+- **Add a black dot showing where the United States (U.S.) falls on this plot.** Note that the U.S. is called `"United States of America"` in both datasets.
+
+
+---
+
+## Extra Challenges
+
+- The `df.gapminder` and `df.global` datasets both have data in the years 2002 and 2007. Compute the change in `gdpPercap` and in `Deaths.Per.100k` between these two years; you may want to use the `pct.change()` function I wrote for you in a previous lab. **Is there a relationship between change in GDP and change in fatalities? What if you consider just Europe?**
