@@ -1,0 +1,113 @@
+Please help me build a html site portfolio for my intro to web design course. The basic requirement is to show my GIS project details with Modal Cards, which are best when you want visitors to quickly view more details about a project without leaving the page. This skill practices event handling, state (open/close), and updating UI content dynamically.
+
+There are specific steps with tasks that need to be implemented bearing in mind this is a beginner hmtl course. Please treat each intruction below as a an item in a checklist that the instructor will be looking for, so please make sure all are accounted for in the final product. Feel free to ask me anything you need clarified. Through these instructions below, you will build a grid/list of project cards, where clicking a card opens a modal with more information about that project.
+
+Recommendations:
+1. Keep it Concise: If you choose the modal path, avoid long-form case-study content. Aim for highlights, tech used, and links.
+2. Don't Over-Scope; implement the assigned pattern cleanly before adding extra features.
+3. Build in Order; HTML structure, then CSS, then JS behavior.
+4. Semantic Element: Use the semantic <dialog> element. It has built-in functions available like my_dialog.showModal() and my_dialog.close()
+5. Selecting Multiple Related Elements; Don't forget that .querySelectorAll() can be used to select each instance of a particular element based on selector (e.g., .chip or .card).
+
+Part 1: Setup:
+1. Create an index.html page in your new repo. It does not need a <header>, <footer>, but it must have the standard HTML page structure (<!doctype html>, <html>, <head>, <body>).
+2. Create a Projects section with a heading (e.g., <h2>Projects</h2>). 
+3. Create a project list/grid with at least 6 project cards that all share a common class (e.g., .project-card). 
+4. Each project card must include a title (e.g., "Project 1") 
+5. Each project card may optionally include (best to include more than just the title, try to make it look good): 
+5.a. Short description (1-2 sentences or a few bullets) 
+5.b. Preview image 
+5.c. A category name (e.g., "Frontend", "UI/UX", "Games") 
+6. Placeholder content is allowed: if you don't have 6 real projects yet, use placeholders. This project is graded on functionality and implementation quality, not content. 
+7. Accessibility best practices: Do your best based on what we've covered (semantic elements, keyboard access, visible focus/hover states, color contrast ratios). 
+8. Hover/focus states: add visible interaction feedback for clickable elements (cards, chips, links, close button, etc.).
+
+Part 2: Card HTML Structure:
+1. Use a real list for sets of cards: <ul>/<ol> with <li>. 
+2. Use the semantic <article> element inside each list item. 
+3. If the card triggers an action (modal), wrap the card in a button. If it navigates, use a link (see path-specific requirements for examples).
+
+Part 3: Modal Implementation:
+1. Each project card must open the modal.
+2. Use one modal for the whole page, and swap its content based on which card was clicked.
+3. Use an array of objects to store your project data and update the modal content from that data (e.g., projects[0], projects[1]).
+4. Each project card button must have a data-index property that aligns with the index of its data in your array of objects (see HTML example below).
+5. Modal content (placeholder content is okay):
+5.a. Project title
+5.b. Details (tools/tech, short description paragraph, etc.)
+5.c. At least one link (e.g., repo, live, or placeholder)
+6. The modal must have a close button inside it.
+7. When the modal opens, background scrolling should be disabled. When the modal closes, background scrolling should be restored.
+
+Optional Enhacement: Move focus to the modal when it opens using .focus() and tabindex="-1"
+
+
+// HTML button card example (opens a modal)
+<li>
+  <article>
+    <button type="button" class="project-card" data-index="0">
+      <h3 class="card-title">Project Title</h3>
+      <!-- Optional: description, image, etc. -->
+    </button>
+  </article>
+</li>
+
+// modal.js (starter template)
+// Goal: Clicking a project card opens a modal and loads data from projects[index].
+
+// TODO 1: Create an array of project objects.
+// Each object should have: title, details, link_text, href
+const projects = [
+  // Example object:
+  // { title: "Project 1", details: "Details here", link_text: "View in GitHub", href: "https://example.com" },
+];
+
+// TODO 2: Select your modal elements from the DOM and store them in variables
+// Required variables: modal, modal_title, modal_details, modal_link, modal_close
+
+// TODO 3: Select all project card buttons
+// Reminder: Each card button should have a shared class (e.g., .project-card) and a data-index attribute
+
+// TODO 4: Complete this function so it loads the correct project data and opens the modal
+function openModalByIndex(index) {
+  const project = projects[index];
+  if (!project) return;
+
+  // TODO 4a: Update your modal content here
+  // Hint: modal_title.textContent = ?
+
+  // TODO 4b: Open the modal with modal.showModal()
+
+  // Disables background scrolling while the modal is open.
+  document.body.style.overflow = "hidden";
+
+  // Optional Enhancement: Focus the modal when it opens (requires tabindex="-1" on the dialog)
+}
+
+// This is what you should call in your click event handler for cards
+// It contains some things we haven't talked about yet, so it is provided for you
+function onCardClicked(event) {
+  const clicked_card = event.currentTarget;
+  const index = Number(clicked_card.dataset.index);
+  openModalByIndex(index);
+}
+    
+// TODO 5: Use a for loop to add a click event listener to each card in card_buttons
+// and use onCardClicked as the click event's function
+
+// TODO 6: Add a click event listener to the modal close button that uses the built-in modal.close() method
+
+// Always restore body scroll when the modal is closed (no matter how it closes)
+// NOTE: This line requires that you define the modal variable above.
+modal.addEventListener("close", function () {
+  document.body.style.overflow = "";
+});
+
+/* Quick note on styling your <dialog> element:
+   If you set display: flex; on the dialog, apply it only when it is open.
+   Otherwise, you can accidentally override the dialog's built-in hiding behavior. */
+
+#project-modal[open] {
+  display: flex;
+  flex-direction: column;
+}

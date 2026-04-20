@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360">
+  <rect width="640" height="360" fill="#edf6e8" />
+  <rect x="28" y="28" width="584" height="304" rx="24" fill="#ffffff" />
+  <circle cx="145" cy="145" r="48" fill="#6ea45c" />
+  <circle cx="250" cy="115" r="38" fill="#8fbe7f" />
+  <circle cx="360" cy="150" r="44" fill="#7aae6b" />
+  <circle cx="470" cy="120" r="34" fill="#98c986" />
+  <rect x="138" y="188" width="14" height="54" fill="#6b4b2a" />
+  <rect x="243" y="153" width="14" height="64" fill="#6b4b2a" />
+  <rect x="353" y="194" width="14" height="52" fill="#6b4b2a" />
+  <rect x="463" y="154" width="14" height="58" fill="#6b4b2a" />
+  <text
+    x="70"
+    y="290"
+    fill="#34572b"
+    font-family="Arial, Helvetica, sans-serif"
+    font-size="28"
+    font-weight="700"
+  >
+    Campus Tree Inventory
+  </text>
+</svg>

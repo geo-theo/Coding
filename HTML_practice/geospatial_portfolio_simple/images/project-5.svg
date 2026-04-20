@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360">
+  <rect width="640" height="360" fill="#f9eedf" />
+  <rect x="28" y="28" width="584" height="304" rx="24" fill="#ffffff" />
+  <rect x="90" y="90" width="460" height="22" rx="11" fill="#f0c67e" />
+  <rect x="120" y="145" width="390" height="18" rx="9" fill="#f5d7a2" />
+  <rect x="170" y="198" width="280" height="18" rx="9" fill="#f0c67e" />
+  <circle cx="170" cy="101" r="20" fill="#b7671c" />
+  <circle cx="300" cy="154" r="20" fill="#b7671c" />
+  <circle cx="450" cy="207" r="20" fill="#b7671c" />
+  <text
+    x="70"
+    y="290"
+    fill="#7a420f"
+    font-family="Arial, Helvetica, sans-serif"
+    font-size="28"
+    font-weight="700"
+  >
+    Transit Service Area
+  </text>
+</svg>

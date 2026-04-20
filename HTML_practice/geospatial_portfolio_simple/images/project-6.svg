@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360">
+  <rect width="640" height="360" fill="#e7f0e1" />
+  <rect x="28" y="28" width="584" height="304" rx="24" fill="#ffffff" />
+  <path
+    d="M90 220 L180 140 L245 185 L315 105 L410 170 L520 120"
+    fill="none"
+    stroke="#4f7c3d"
+    stroke-width="18"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  <circle cx="180" cy="140" r="16" fill="#2f5d2f" />
+  <circle cx="315" cy="105" r="16" fill="#2f5d2f" />
+  <circle cx="520" cy="120" r="16" fill="#2f5d2f" />
+  <rect x="105" y="95" width="75" height="40" fill="#cde1bf" />
+  <rect x="430" y="185" width="95" height="45" fill="#cde1bf" />
+  <text
+    x="70"
+    y="290"
+    fill="#325029"
+    font-family="Arial, Helvetica, sans-serif"
+    font-size="28"
+    font-weight="700"
+  >
+    Habitat Model
+  </text>
+</svg>

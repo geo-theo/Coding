@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360">
+  <rect width="640" height="360" fill="#e3eef9" />
+  <rect x="28" y="28" width="584" height="304" rx="24" fill="#ffffff" />
+  <path
+    d="M110 90 C180 150, 220 240, 315 280 S480 260, 540 120"
+    fill="none"
+    stroke="#4f87c2"
+    stroke-width="22"
+    stroke-linecap="round"
+  />
+  <rect x="70" y="90" width="110" height="140" fill="#d7e6f6" />
+  <rect x="410" y="95" width="120" height="150" fill="#bed7ef" />
+  <path
+    d="M205 100 L250 150 L225 250 L165 210 Z"
+    fill="#8cb6e8"
+  />
+  <text
+    x="70"
+    y="290"
+    fill="#22486e"
+    font-family="Arial, Helvetica, sans-serif"
+    font-size="28"
+    font-weight="700"
+  >
+    Flood Risk Story Map
+  </text>
+</svg>

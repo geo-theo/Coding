@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 640">
+  <rect width="960" height="640" fill="#d8e6f7" />
+  <rect x="60" y="60" width="840" height="520" rx="28" fill="#f7fbff" />
+  <path
+    d="M180 180 C260 120, 350 120, 430 180 S610 250, 710 200"
+    fill="none"
+    stroke="#8cb6e8"
+    stroke-width="22"
+    stroke-linecap="round"
+  />
+  <path
+    d="M240 500 C320 430, 420 430, 540 500 S700 560, 780 470"
+    fill="none"
+    stroke="#b4d2f2"
+    stroke-width="16"
+    stroke-linecap="round"
+  />
+  <path
+    d="M220 250 C310 320, 360 360, 430 430 S580 500, 700 420"
+    fill="none"
+    stroke="#2b5fb2"
+    stroke-width="10"
+    stroke-dasharray="18 16"
+    stroke-linecap="round"
+  />
+  <circle cx="220" cy="250" r="22" fill="#1c4079" />
+  <circle cx="430" cy="430" r="22" fill="#1c4079" />
+  <circle cx="700" cy="420" r="22" fill="#1c4079" />
+  <path d="M220 164 L240 206 L200 206 Z" fill="#79b26a" />
+  <path d="M430 344 L450 386 L410 386 Z" fill="#79b26a" />
+  <path d="M700 334 L720 376 L680 376 Z" fill="#79b26a" />
+  <rect x="120" y="120" width="150" height="90" rx="16" fill="#ffffff" />
+  <text
+    x="145"
+    y="172"
+    fill="#1f2a44"
+    font-family="Arial, Helvetica, sans-serif"
+    font-size="30"
+    font-weight="700"
+  >
+    GIS
+  </text>
+  <text
+    x="120"
+    y="540"
+    fill="#1f2a44"
+    font-family="Arial, Helvetica, sans-serif"
+    font-size="44"
+    font-weight="700"
+  >
+    Map Portfolio
+  </text>
+</svg>
