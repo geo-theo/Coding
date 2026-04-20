@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GIS Portfolio</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="page">
+      <section class="intro">
+        <p class="eyebrow">Intro to Web Design Portfolio</p>
+        <h1>GIS Projects at a Glance</h1>
+        <p class="intro-text">
+          This portfolio highlights six GIS projects using modal cards. Click any
+          project to quickly open tools, methods, and a link without leaving the
+          page.
+        </p>
+      </section>
+
+      <section class="projects-section" aria-labelledby="projects-heading">
+        <div class="section-copy">
+          <h2 id="projects-heading">Projects</h2>
+          <p>
+            Each card opens one shared modal that updates with project details.
+          </p>
+        </div>
+
+        <ul class="project-list">
+          <li>
+            <article class="project-entry" aria-labelledby="project-title-0">
+              <button
+                type="button"
+                class="project-card"
+                data-index="0"
+                aria-labelledby="project-title-0"
+                aria-describedby="project-desc-0"
+              >
+                <span class="card-preview preview-growth" aria-hidden="true"></span>
+                <span class="card-category">Remote Sensing</span>
+                <span class="card-title" id="project-title-0"
+                  >Urban Growth Change Map</span
+                >
+                <span class="card-description" id="project-desc-0">
+                  Compared land cover snapshots to show where development expanded
+                  along the city edge.
+                </span>
+                <span class="card-hint">Open project details</span>
+              </button>
+            </article>
+          </li>
+
+          <li>
+            <article class="project-entry" aria-labelledby="project-title-1">
+              <button
+                type="button"
+                class="project-card"
+                data-index="1"
+                aria-labelledby="project-title-1"
+                aria-describedby="project-desc-1"
+              >
+                <span class="card-preview preview-trail" aria-hidden="true"></span>
+                <span class="card-category">Public Planning</span>
+                <span class="card-title" id="project-title-1"
+                  >Trail Accessibility Audit</span
+                >
+                <span class="card-description" id="project-desc-1">
+                  Mapped curb ramps, sidewalks, and trail links to identify access
+                  gaps near local parks.
+                </span>
+                <span class="card-hint">Open project details</span>
+              </button>
+            </article>
+          </li>
+
+          <li>
+            <article class="project-entry" aria-labelledby="project-title-2">
+              <button
+                type="button"
+                class="project-card"
+                data-index="2"
+                aria-labelledby="project-title-2"
+                aria-describedby="project-desc-2"
+              >
+                <span class="card-preview preview-flood" aria-hidden="true"></span>
+                <span class="card-category">Hazard Analysis</span>
+                <span class="card-title" id="project-title-2"
+                  >Flood Risk Story Map</span
+                >
+                <span class="card-description" id="project-desc-2">
+                  Combined elevation and stream data to explain flood-prone zones in
+                  a simple public-facing layout.
+                </span>
+                <span class="card-hint">Open project details</span>
+              </button>
+            </article>
+          </li>
+
+          <li>
+            <article class="project-entry" aria-labelledby="project-title-3">
+              <button
+                type="button"
+                class="project-card"
+                data-index="3"
+                aria-labelledby="project-title-3"
+                aria-describedby="project-desc-3"
+              >
+                <span class="card-preview preview-trees" aria-hidden="true"></span>
+                <span class="card-category">Field Data</span>
+                <span class="card-title" id="project-title-3"
+                  >Campus Tree Inventory</span
+                >
+                <span class="card-description" id="project-desc-3">
+                  Organized point data for tree species, condition, and maintenance
+                  priorities across campus.
+                </span>
+                <span class="card-hint">Open project details</span>
+              </button>
+            </article>
+          </li>
+
+          <li>
+            <article class="project-entry" aria-labelledby="project-title-4">
+              <button
+                type="button"
+                class="project-card"
+                data-index="4"
+                aria-labelledby="project-title-4"
+                aria-describedby="project-desc-4"
+              >
+                <span class="card-preview preview-transit" aria-hidden="true"></span>
+                <span class="card-category">Network Analysis</span>
+                <span class="card-title" id="project-title-4"
+                  >Transit Stop Service Area</span
+                >
+                <span class="card-description" id="project-desc-4">
+                  Measured walk sheds around bus stops to see which neighborhoods had
+                  the strongest service coverage.
+                </span>
+                <span class="card-hint">Open project details</span>
+              </button>
+            </article>
+          </li>
+
+          <li>
+            <article class="project-entry" aria-labelledby="project-title-5">
+              <button
+                type="button"
+                class="project-card"
+                data-index="5"
+                aria-labelledby="project-title-5"
+                aria-describedby="project-desc-5"
+              >
+                <span class="card-preview preview-habitat" aria-hidden="true"></span>
+                <span class="card-category">Environmental GIS</span>
+                <span class="card-title" id="project-title-5"
+                  >Habitat Suitability Model</span
+                >
+                <span class="card-description" id="project-desc-5">
+                  Used slope, land cover, and water distance layers to estimate
+                  suitable habitat zones.
+                </span>
+                <span class="card-hint">Open project details</span>
+              </button>
+            </article>
+          </li>
+        </ul>
+      </section>
+    </main>
+
+    <dialog
+      id="project-modal"
+      class="project-modal"
+      tabindex="-1"
+      aria-labelledby="modal-title"
+      aria-describedby="modal-details"
+    >
+      <div class="modal-top">
+        <p class="modal-label">Project Details</p>
+        <button
+          type="button"
+          class="modal-close"
+          id="modal-close"
+          aria-label="Close project details"
+        >
+          Close
+        </button>
+      </div>
+
+      <h3 id="modal-title">Project title</h3>
+      <p class="modal-category" id="modal-category">Category</p>
+      <p class="modal-tools">
+        <strong>Tools:</strong>
+        <span id="modal-tools-text">ArcGIS Pro</span>
+      </p>
+      <p id="modal-details">
+        Project details will appear here when a card is selected.
+      </p>
+      <a
+        id="modal-link"
+        class="modal-link"
+        href="https://example.com"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        View project link
+      </a>
+    </dialog>
+
+    <script src="modal.js"></script>
+  </body>
+</html>
