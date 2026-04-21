@@ -1,0 +1,148 @@
+---
+title: 'Lab #12'
+output: html_document
+date: "April 16, 2025"
+---
+
+**Install the required packages:**
+
+```{r eval=FALSE}
+install.packages(c('dplyr', 'tidyr', 'sf', 'lubridate', 'ggplot2'))
+```
+
+**Download the data and extract it to your current working directory:**
+
+- [ne_10m_admin_0_countries_NorthAmerica.zip](http://files.ntsg.umt.edu/data/GIS_Programming/data/ne_10m_admin_0_countries_NorthAmerica.zip)
+- [BirdBuddy_2023.zip](http://files.ntsg.umt.edu/data/GIS_Programming/data/BirdBuddy_2023.zip)
+  
+The BirdBuddy dataset is for creeping on backyard birds, [if that's your thing.](https://live.mybirdbuddy.com/)
+
+**In this lab, we'll introduce the concept of a species' *home range;* the area over which that species regularly occurs during a certain period of time.** Because we have Point data on bird presence, there are two ways to calculate home range:
+
+- As the geographic center (centroid) of all the presence points;
+- As the envelope (a polygon) containing all the presence points.
+
+
+## Downloading the Data
+
+You may need to change the following file paths, after downloading the data.
+
+```{r}
+library(dplyr, warn.conflicts = F)
+library(tidyr)
+library(stringr)
+library(ggplot2)
+library(sf)
+library(lubridate, warn.conflicts = F)
+
+pipeline.birds <- function (df) {
+  bind_rows(filter(df, !str_detect(species, ',')), 
+    # For those rows with multiple, comma-delimited bird species, separate them
+    df %>%
+    filter(str_detect(species, ',')) %>%
+      separate_rows(species, sep = ',')) %>%
+    mutate(date = as_date(str_sub(timestamp, 1, 10)),
+    hour.of.day = hour(as_datetime(timestamp)))
+}
+
+# Read in the BirdBuddy data, rename columns
+df.birds <- read.csv('data/BirdBuddy_March2023.csv') %>%
+  rename(latitude = anonymized_latitude, longitude = anonymized_longitude, species = species_name) %>%
+  pipeline.birds
+
+countries <- st_read('data/ne_10m_admin_0_countries_NorthAmerica.shp')
+```
+
+
+---
+
+## Working with BirdBuddy Data
+
+For the purposes of this Lab, we'll pretend that the March data from BirdBuddy is in any way representative of bird species' "home ranges" in March. This might be true of more representative datasets like Cornell's eBird database (which is not publicly available). The `timestamp` is likely in the UTC time zone, though BirdBuddy doesn't make this clear.
+
+
+```{r}
+df.birds %>%
+  head
+```
+
+**The first thing we need to do with the data, which were in CSV format and read-in as a plain `data.frame`, is to convert them to a spatial `sf` `data.frame`.**
+
+
+```{r}
+# The "coords" argument tells st_as_sf() which columns contain our X and Y spatial coordinates
+birds <- st_as_sf(df.birds, coords = c('longitude', 'latitude'), crs = st_crs(4326))
+class(birds)
+```
+
+
+---
+
+## Problem 12.1 - Chickadee Counts
+
+**Make a `ggplot()` plot showing:**
+
+- The number of birds observed each hour of the day (across all days in March), for Chickadee species only.
+- Show a separate plot for each Chickadee species.
+
+You may want to use `df.birds` for this and not `birds`; i.e., not the `sf` data frame.
+
+
+---
+
+## Problem 12.2 - Chickadee Ranges (Centroids)
+
+Write a `dplyr` pipeline, using `sf` functions, to calculate the *centroid* of each Chickadee species' home range.
+
+**Hint:** As each row (feature) in the `birds` dataset has a single Point geometry, and we want to calculate the geographic center (an average) of all those geometries, we first need a way of collecting all those Points into a MultiPoint geometry...
+
+
+---
+
+## Problem 12.3 - Jay Ranges (Envelopes)
+
+**Make a single map of the "home ranges" of these four Jay species: Blue Jay, Canada Jay, Steller's Jay, Pinyon Jay, and the California Scrub-Jay.**
+
+```{r}
+jays <- c('Blue Jay', 'Canada Jay', 'Stellers Jay', 'California Scrub-Jay', 'Pinyon Jay')
+```
+
+Your map should show the home ranges overlaid on top of the `countries` layer.
+
+**Hint:** You may need to make use of the `st_union()` and `st_convex_hull()` functions.
+
+**Hint:** You may want to adjust the `alpha` of the home-ranges layer, to help see overlapping home ranges.
+
+
+---
+
+## Problem 12.4 - Jay Ranges Relative to Blue Jays
+
+There are four Jay species whose March ranges overlap with that of the Blue Jay: `"California Scrub-Jay"`, `"Canada Jay"`, `"Pinyon Jay"`, and `"Stellers Jay"`.
+
+1. **Project the BirdBuddy data to Albers Equal-Area Conic projection** (using the `albers` CRS, below).
+1. **Plot the intersection of each Jay species' home range with that of the Blue Jay.** Show a separate plot for each intersection, using the Albers projection.
+1. **Report the area of the intersection for each species.**
+
+**Hint:** There should be four plots because there are four Jay species with home ranges overlapping that of the Blue Jay.
+
+
+```{r}
+albers <- st_crs('+proj=aea +lat_0=40 +lon_0=-96 +lat_1=20 +lat_2=60 +x_0=0 +y_0=0 +datum=NAD83 +units=m +no_defs +type=crs')
+```
+
+
+---
+
+## Extra Challenges
+
+- Using the additional dataset from August (see below), **how has the geographic center of the Blue Jay's home range changed between March and August?**
+
+
+```{r}
+df.birds.aug <- read.csv('data/BirdBuddy_August2023.csv') %>%
+  rename(latitude = anonymized_latitude, longitude = anonymized_longitude, species = species_name) %>%
+  pipeline.birds
+
+birds.aug <- st_as_sf(df.birds.aug, coords = c('longitude', 'latitude'), crs = st_crs(4326))
+```
