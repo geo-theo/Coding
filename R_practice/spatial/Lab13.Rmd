@@ -1,0 +1,258 @@
+---
+title: 'Lab #13 - Symonds'
+output: html_document
+date: "April 22, 2026"
+---
+
+**Data should already be in the `data` subfolder in this ZIP file, but you can also download the data from here:**
+
+- [Missoula_City_layers_WGS84.zip](http://files.ntsg.umt.edu/data/GIS_Programming/data/Missoula_City_layers_WGS84.zip) (Unzip and extract to a multiple Shapefiles)
+
+Today's lab asks you to create maps and analyze vector data about the City of Missoula. In addition to a couple of datasets downloaded from Open Street Map, most of the data came from the City of Missoula's website, where you can also find more information:
+
+- https://missoulamaps-cityofmissoula.hub.arcgis.com/datasets/CityofMissoula::bike-facilities/about
+- https://missoulamaps-cityofmissoula.hub.arcgis.com/datasets/CityofMissoula::neighborhoods-1/about
+- https://missoulamaps-cityofmissoula.hub.arcgis.com/datasets/CityofMissoula::snow-priority/about
+- https://missoulamaps-cityofmissoula.hub.arcgis.com/datasets/CityofMissoula::transit-route-1/about
+- https://missoulamaps-cityofmissoula.hub.arcgis.com/datasets/CityofMissoula::transit-stop-1/about
+- https://missoulamaps-cityofmissoula.hub.arcgis.com/datasets/CityofMissoula::council-wards/about
+
+**The bike route (`bike.routes`) dataset has a field `BikeFacili`, which contains the following values:**
+
+- `Cycletrack` - This refers to bike lanes that are protected from traffic.
+- `Greenway` - This is the City's designation for a regular street that allegedly has lower traffic volumes and speeds; it has no bike infrastructure.
+- `Lane` - This is a bike lane, delineated by a painted stripe.
+- `Route` - This is just a regular street that may (or may not) have sharrows painted.
+
+Unfortunately, these labels are not used consistently (see Higgins Ave). Anything other than a `Cycletrack` or bike `Lane` is probably not going to feel safe for many cyclists.
+
+**The snow-removal priority route (`snow.routes`) dataset has a field `SnowPriori`, which contains the following values:**
+
+- `1` (High Priority)
+- `1-CITY` (High Priority, City-owned route)
+- `2` (Next Priority)
+- `2-CITY` (Next Priority, City-owned route)
+- `COUNTY` (County road, should be ignored for our analysis)
+- `STATE` (A State highway, should be ignored for our analysis)
+
+The reality is that unless it is a high-priority route (`1` or `1-CITY`), it's unlikely to be plowed when you need to go to work or school in the morning.
+
+```{r}
+library(dplyr, warn.conflicts = F)
+library(stringr)
+library(sf)
+library(ggplot2)
+library(units)
+options(stringsAsFactors = F)
+
+# University Oval (considered to be the center of campus)
+oval <- st_read('data/University_Oval.shp', quiet = T)
+
+# Bike routes designated by the City of Missoula
+bike.routes <- st_read('data/Bicycle_facilities_2023.shp', quiet = T)
+
+# Neighborhoods
+hoods <- st_read('data/Neighborhoods_2023.shp', quiet = T)
+
+# Natural areas (from Open Street Map)
+parks <- st_read('data/Parks_Missoula_OSM.shp', quiet = T)
+
+# Snow priority map - The order in which streets get cleared of snow
+snow.routes <- st_read('data/Snow_Priority_routes_2023.shp', quiet = T)
+
+# City Council Wards
+wards <- st_read('data/CouncilWards_MSO.shp', quiet = T)
+
+# Bus transit (Mountain Line) routes
+transit.routes <- st_read('data/Transit_routes_2023.shp', quiet = T)
+
+# Bus transit (Mountain Line) stops
+transit.stops <- st_read('data/Transit_stops_2023.shp', quiet = T)
+```
+
+
+---
+
+## Problem 13.1 - City Map
+
+Create a map of the City showing:
+
+- The Wards, colored according to the Ward number
+- The transit routes
+- Parks, shown as green dots
+
+[The map projection should be UTM Zone 11 N (WGS84).](https://epsg.io/32611)
+
+[Here's some information on different point shapes you can use in `ggplot2`.](http://www.sthda.com/english/wiki/ggplot2-point-shapes)
+
+## Solution 13.1
+```{r}
+# Trasnformation to UTM 11  (EPSG:32611)
+wards.utm <- st_transform(wards, crs = 32611)
+transit.routes.utm <- st_transform(transit.routes, crs = 32611)
+parks.utm <- st_transform(parks, crs = 32611)
+# Create chloropeth map using the ward neighborhood's codes to plot the polygons of each 
+# and show park dots on top
+ggplot() +
+  geom_sf(data = wards.utm, aes(fill = WardNumber), color = 'white') +
+  geom_sf(data = transit.routes.utm, aes(color = 'Transit routes'), linewidth = 0.4) +
+  geom_sf(data = st_point_on_surface(parks.utm), aes(shape = 'Parks'), color = 'darkgreen', size = 1.5) +
+  coord_sf(crs = st_crs(32611), datum = st_crs(32611)) +
+  scale_color_manual(name = 'Public Transport', values = c('Transit routes' = 'black')) +
+  scale_shape_manual(name = 'Green Spaces', values = c('Parks' = 16)) +
+  labs(fill = 'Ward') +
+  theme_minimal()
+
+```
+
+The polygons of the ward neighborhoods form the basis of our choropleth map, and we can use their code number to give a unique color value to each polygon. The public bus lines are overlayed as a black line, and then finally the parks are overlayted as green dots. At first glace it appears that some wards might not have as many parks and/or transport lines as other neighborhoods have.
+
+---
+
+## Problem 13.2 - Mapping Transit Density
+
+Using a geoprocessing pipeline, make a choropleth map of the number of transit stops each neighborhood, `hoods` contains.
+
+**Hint:** As a geoprocessing pipeline, you could start with either the `hoods` or `transit.stops`. Remember that the dataset you start your pipeline with is very important. In this case, the dataset you start with should be the one that has the geometry you want to show on your map.
+
+## Solution 13.2
+```{r}
+# Transform to UTM 11 (EPSG:32611)
+transit.stops.utm <- st_transform(transit.stops, crs = 32611) %>%
+  mutate(stop_id = row_number()) %>%
+  select(stop_id)
+
+# show neighborhood geometry as choropleth base then count transit stops per area
+hood.transit.counts <- hoods %>%
+  st_transform(crs = 32611) %>%
+  mutate(hood_id = row_number()) %>%
+  st_join(transit.stops.utm, join = st_intersects) %>%
+  group_by(hood_id) %>%
+  summarize(num_stops = sum(!is.na(stop_id)), .groups = 'drop')
+
+# shade neighborhood polygons darker for more transit stops count
+ggplot() +
+  geom_sf(data = hood.transit.counts, aes(fill = num_stops), color = 'white') +
+  scale_fill_distiller(palette = 'Purples', direction = 1) +
+  coord_sf(crs = st_crs(32611), datum = st_crs(32611)) +
+  labs(fill = 'Transit stops') +
+  theme_minimal()
+
+```
+
+IN this choropleth map we are counting the number of transit stops per neighborhood boundary in Missoula, which shows that the neighborhoods with the most transit stops are in the NW area near north Reserve and the SW area near the mall, which makes sense that these places of shopping and business would have the most transit stops.
+
+---
+
+## Problem 13.3 - Campus Transit Map
+
+Make a map of the bike routes and transit stops within 500 meters of the UM Oval.
+
+**Hint:** There are multiple ways to solve this problem. One way involves a spatial predicate we may not have talked about in class yet: `st_is_within_distance()`.
+
+## Solution 13.3
+```{r}
+# Transform to UTM 11 (EPSG:32611)
+oval.utm <- st_transform(oval, crs = 32611)
+bike.routes.utm <- st_transform(bike.routes, crs = 32611)
+transit.stops.utm <- st_transform(transit.stops, crs = 32611)
+
+#set 500 meter buffer around UM's oval 
+#and retunr transit stops that fall within this buffer
+#and return bike routes that fall within or intersect thyis buffer
+oval.buffer <- st_buffer(oval.utm, dist = 500)
+bike.routes.campus <- bike.routes.utm %>%
+  st_intersection(st_union(oval.buffer))
+transit.stops.campus <- transit.stops.utm[
+  lengths(st_is_within_distance(transit.stops.utm, oval.utm, dist = 500)) > 0,
+  ]
+# Plot oval tracks, 500m buffer, and the transit stop points & bike tracks that are within 500m buffer
+ggplot() +
+  geom_sf(data = oval.buffer, aes(linetype = '500m Buffer'), fill = NA, color = 'maroon', linewidth = 1) +
+  geom_sf(data = bike.routes.campus, aes(color = BikeFacili), linewidth = 1) +
+  geom_sf(data = transit.stops.campus, aes(shape = 'Transit stops'), color = 'black', size = 2) +
+  geom_sf(data = oval.utm, aes(linetype = 'UM Oval'), fill = NA, color = 'maroon', linewidth = 2.5) +
+  coord_sf(crs = st_crs(32611), datum = st_crs(32611)) +
+  scale_linetype_manual(name = 'UM Oval', values = c('500m Buffer' = 'dashed', 'UM Oval' = 'solid')) +
+  labs(title = 'Campus Transit Map (EPSG:32611)', color = 'Bike Facility') +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5, face = 'bold'))
+```
+
+The resulting map shows a 500m oval buffer around the original UM oval sidewalk, and we can see the bus stops and bike routes that fall within this buffer. In other words, this is a map of all the bike and public transport infrastructure that can be accesed from within 500m of the central oval.
+
+---
+
+## Problem 13.4 - Neighborhood Accessibility
+
+Let's imagine you are a consultant for the City of Missoula. The City wants to assess its neighborhoods in terms of their accessibility during heavy snow conditions. They've asked you to create a map that shows each neighborhood's "score" in terms of two criteria: 1) The length of public transit routes within the neighborhood; and 2) The length of high-priority snow-plowing routes within the neighborhood.
+
+**You should:**
+
+1. Compute the lengths of all the transit and high-priority snow-plowed routes. For snow-plowed routes, consider *only* routes indicated priority `1` or `1-CITY`.
+2. Figure out which (transit and snow-plow) routes are within each neighborhood.
+3. Compute the neighborhood's "score" as the *sum* of the total transit route length in the neighborhood and total high-priority plowed length.
+
+[Consult this map if you want to learn how to identify each neighborhood.](https://missoulamaps-cityofmissoula.hub.arcgis.com/datasets/CityofMissoula::neighborhoods-1/explore)
+
+**Hint:** Every layer is going to need to be in the UTM 11N projection: you're going to be calculating lengths in meters.
+
+**Hint:** You must re-group the data after any spatial join. Just remember to (re-)group your data before using `mutate()` (if applicable), `summarize()`, or any aggregation functions.
+
+## Solution 13.4
+```{r}
+# Put every layer in UTM Zone 11N so route lengths are calculated in meters.
+hoods.utm <- st_transform(hoods, crs = 32611) %>%
+  mutate(hood_id = row_number())
+transit.routes.utm <- st_transform(transit.routes, crs = 32611)
+high.priority.snow.utm <- snow.routes %>%
+  filter(SnowPriori %in% c('1', '1-CITY')) %>%
+  st_transform(crs = 32611)
+
+# 1) Calculate length of transit & snow plow routes
+# 2)intersect with neighborhood boundaries
+transit.lengths.by.hood <- suppressWarnings(
+  st_intersection(
+    hoods.utm %>% select(hood_id, FeatureNam),
+    transit.routes.utm
+  )
+) %>%
+  mutate(transit_length_m = as.numeric(st_length(.))) %>%
+  st_drop_geometry() %>%
+  group_by(hood_id) %>%
+  summarize(transit_length_m = sum(transit_length_m), .groups = 'drop')
+snow.lengths.by.hood <- suppressWarnings(
+  st_intersection(
+    hoods.utm %>% select(hood_id, FeatureNam),
+    high.priority.snow.utm
+  )
+) %>%
+  mutate(snow_length_m = as.numeric(st_length(.))) %>%
+  st_drop_geometry() %>%
+  group_by(hood_id) %>%
+  summarize(snow_length_m = sum(snow_length_m), .groups = 'drop')
+
+# 3) Join two length sums per neighborhoods and compute score.
+hood.accessibility <- hoods.utm %>%
+  left_join(transit.lengths.by.hood, by = 'hood_id') %>%
+  left_join(snow.lengths.by.hood, by = 'hood_id') %>%
+  mutate(
+    transit_length_m = coalesce(transit_length_m, 0),
+    snow_length_m = coalesce(snow_length_m, 0),
+    score_m = transit_length_m + snow_length_m
+  )
+#plot final choropleth
+ggplot() +
+  geom_sf(data = hood.accessibility, aes(fill = score_m), color = 'white') +
+  scale_fill_distiller(palette = 'YlGnBu', direction = 1) +
+  coord_sf(crs = st_crs(32611), datum = st_crs(32611)) +
+  labs(
+    title = 'Neighborhood Accessibility During Heavy Snow',
+    fill = 'Score (m)'
+  ) +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5, face = 'bold'))
+
+```
+
+To determine the degree to which each nieghborhood around Missoula is "accessible" during snowstorms, we consider more public transportation and higher priority plowing as making roads to be more accessible during snowstorms. So we calculated the total sum of all public transit roads and high priority snow plow roads that ran through each neighborhood, and this map shows the more accessible neighborhoods as darker (igher score) and the less accessible neighborhoods as lighted (lower score). We can observe that the neighborhoods that can be considered the most accessiblre during snowstorms are the ones that have I90, Reserve, and Broadway, the main artery roads running East-NW and North-South. We can see that East Missoula has dramatically less accessible roads during heavy snow.
