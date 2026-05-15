@@ -1,0 +1,147 @@
+---
+title: 'Lab #14'
+output: html_document
+date: "May 1, 2024"
+---
+
+
+```{r}
+library(sf)
+library(terra)
+library(terrainr)
+library(dplyr, warn.conflicts = F)
+library(tidyr, warn.conflicts = F) # For replace_na()
+library(ggplot2)
+options(stringsAsFactors = F)
+```
+
+**Download the required datasets:**
+
+- [Montana_DEM_1992_250m.tiff](http://files.ntsg.umt.edu/data/GIS_Programming/data/Montana_DEM_1992_250m.tiff)
+- [GlacierNatPark_vector_data.zip](http://files.ntsg.umt.edu/data/GIS_Programming/data/GlacierNatPark_vector_data.zip) (Unzip three Shapefiles)
+- [Gonzalez_National_Park_climate_data.zip](http://files.ntsg.umt.edu/data/GIS_Programming/data/Gonzalez_National_Park_climate_data.zip) (Unzip one Shapefile, three GeoTIFFs)
+
+The data on projected temperature, precipitation changes in CONUS comes from [a study on historical and future changes in America's National Parks.](https://irma.nps.gov/DataStore/Reference/Profile/2266988)
+
+
+## Overview
+
+### Combining Raster and Vector Data
+
+Vector datasets can be opened using the `terra` library as well, though they will have a different representation than when opened with `sf`.
+
+
+```{r}
+with.sf <- st_read('data/GlacierNatPark_boundary_UTM.shp')
+with.terra <- vect('data/GlacierNatPark_boundary_UTM.shp')
+```
+
+
+```{r}
+class(with.sf)
+```
+
+
+```{r}
+class(with.terra)
+```
+
+Certain functions in `terra` only work with `SpatVector` and not with an `sf::data.frame`.
+
+**But any `sf::data.frame` can be turned into an `terra::SpatVector` using the `vect()` function:**
+
+
+```{r}
+thing <- vect(with.sf)
+class(thing)
+```
+
+### Reading in Data
+
+
+```{r}
+boundary <- st_read('data/GlacierNatPark_boundary_UTM.shp')
+roads <- st_read('data/NPS_GlacierNatPark_roads_NAD83.shp')
+trails <- st_read('data/NPS_GlacierNatPark_trails_NAD83.shp')
+
+# Both the Roads and Trails layers are 4-dimensional vector data (XYZM)!
+#    We need them to be 2-dimensional (XY), so we drop the "ZM" coordinates.
+roads <- st_zm(roads)
+trails <- st_zm(trails)
+
+# There shouldn't be NA values in a character string column; use empty string, "", instead
+roads <- roads %>%
+  replace_na(list(RDNAME = ''))
+```
+
+---
+
+## Problem 14.1 - Clipping and Projecting a Raster
+
+1. Project the DEM raster to [the UTM 12 N coordinate reference system (CRS)](https://epsg.io/26912), same as the `boundary` data.
+2. Clip *and mask* the DEM raster to the Park `boundary`. Pixels outside the `boundary` should be masked.
+3. Convert the data from meters to feet.
+4. Plot the result.
+
+**Hint:** The `terra` `crs()` function can also be used with vector data.
+
+**Hint:** You'll need to use `terra` library's `crop()` function, with the argument `mask = TRUE`, to crop and mask the DEM raster to the Park `boundary`. Read about the `crop()` function using: `help(crop)`.
+
+---
+
+## Problem 14.2 - Mapping Glacier National Park
+
+Using the clipped, projected, and converted DEM from the previous problem... **Create a map of Glacier National Park that shows:**
+
+- All Park roads, `NPS_GlacierNatPark_roads_NAD83.shp` or `roads`
+- All Park trails, `NPS_GlacierNatPark_trails_NAD83.shp` or `trails`
+- The "Going-to-the-Sun" road should be styled differently from other roads, with a legend entry distinguishing the road from all other Park roads.
+
+The map should be displayed in the NAD83 UTM 12 N coordinate system (same as `boundary`).
+
+**Some advice on making your map prettier:** Line width of POLYGON features in `geom_sf()` is controlled by the `lwd` aesthetic and **not** the `size` aesthetic; e.g.: `geom_sf(data = something, lwd = 2)`
+
+---
+
+## Future Changes in America's National Parks
+
+The Gonzalez et al. (2018) study analyzed future temperature and precipitation in America's National Parks.
+
+- `Gonzalez_temp_proj_CONUS_26_trend_resampled.tif`: Projected temperature trends (deg C per 100 years) through 2100 under RCP 2.6
+- `Gonzalez_temp_proj_CONUS_85_trend_resampled.tif`: Projected temperature trends (deg C per 100 years) through 2100 under RCP 8.5
+- `Gonzalez_temp_proj_CONUS_26_vel_resampled.tif`: The *climate velocity* (km per year) under RCP 2.6
+
+Boundaries for America's National Parks are provided as the `Gonzalez_National_Park_boundaries.shp` Shapefile inside `Gonzalez_National_Park_climate_data.zip`.
+
+---
+
+## Problem 14.3 - Temperature Trends
+
+Plot the temperature trends in each of these seven (7) National Parks:
+
+
+```{r}
+seven.parks <- c('Olympic National Park', 'Everglades National Park', 'Yellowstone National Park', 'Joshua Tree National Park', 'Yosemite National Park', 'Big Bend National Park', 'Glacier National Park')
+```
+
+**You might choose to show this as a bar plot, where the height/ length of the bar corresponds to the temperature trend through 2100. Show temperature trends for both scenarios** (RCP 2.6 and RCP 8.5) **on a single plot, using either facets or dodged bars.**
+
+**Hint:** You will need to use the `zonal()` function. [Read about it here.](https://rspatial.github.io/terra/reference/zonal.html)
+
+**Hint:** You can bind two data frames together using [`bind_cols()`](https://dplyr.tidyverse.org/reference/bind_cols.html) or [`bind_rows()`](https://dplyr.tidyverse.org/reference/bind_rows.html). Or, you can just create a new data frame from vectors:
+
+```{r, eval=FALSE}
+data.frame(some.column = other.df$ColumnA, another.column = other.df$ColumnB)
+```
+
+**Hint:** The `tidyr` function `gather()` might also help, to combine the data from different scenarios into a single column; this can make plotting easier in `ggplot2`.
+
+---
+
+## Problem 14.4 - Climate Velocity
+
+Climate velocity (km per year) is "the instantaneous local velocity along Earth’s surface needed to maintain constant temperatures" [(Loarie et al. 2009)](https://www.nature.com/articles/nature08649). **In other words, how fast do organisms need to travel in order to maintain a constant-temperature environment for themselves?**
+
+**Is there a relationship between climate velocity and latitude?** Use the `parks` vector dataset to answer this question. Can you find representative longitude-latitude coordinates (e.g., centroid) for each National Park?
+
+**Hint:** The `st_coordinates()` function will give you an XY-coordinate pair, if you have a POINT geometry. **Ensure that you use `group_by(NUMBER)` if you're going to use `st_coordinates()`, so that it is applied separately to each Park (each row).**
