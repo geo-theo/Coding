@@ -1,0 +1,93 @@
+// Converts point geometry from EPSG:4326 longitude/latitude to EPSG:5817.
+// EPSG:5817 is "Tombak LNG plant", a local engineering CRS in metres.
+// The EPSG definition provides axes, units, and area of use, but no geodetic
+// projection or datum transformation from WGS 84. Enter two surveyed control
+// points below before using this expression.
+
+// Control point 1: EPSG:4326 longitude/latitude and matching EPSG:5817 x/y.
+var controlLongitude1 = null;
+var controlLatitude1 = null;
+var controlX1 = null;
+var controlY1 = null;
+
+// Control point 2: EPSG:4326 longitude/latitude and matching EPSG:5817 x/y.
+var controlLongitude2 = null;
+var controlLatitude2 = null;
+var controlX2 = null;
+var controlY2 = null;
+
+function ToRadians(degrees) {
+  return degrees * PI / 180;
+}
+
+function GeodeticToEcef(longitude, latitude) {
+  var semiMajorAxis = 6378137;
+  var inverseFlattening = 298.257223563;
+  var flattening = 1 / inverseFlattening;
+  var eccentricitySquared = 2 * flattening - Pow(flattening, 2);
+
+  var lon = ToRadians(longitude);
+  var lat = ToRadians(latitude);
+  var sinLat = Sin(lat);
+  var primeVerticalRadius = semiMajorAxis / Sqrt(1 - eccentricitySquared * Pow(sinLat, 2));
+
+  return {
+    x: primeVerticalRadius * Cos(lat) * Cos(lon),
+    y: primeVerticalRadius * Cos(lat) * Sin(lon),
+    z: primeVerticalRadius * (1 - eccentricitySquared) * sinLat
+  };
+}
+
+function GeodeticToLocalEastNorth(longitude, latitude, originLongitude, originLatitude) {
+  var pointEcef = GeodeticToEcef(longitude, latitude);
+  var originEcef = GeodeticToEcef(originLongitude, originLatitude);
+
+  var lon0 = ToRadians(originLongitude);
+  var lat0 = ToRadians(originLatitude);
+  var dx = pointEcef.x - originEcef.x;
+  var dy = pointEcef.y - originEcef.y;
+  var dz = pointEcef.z - originEcef.z;
+
+  return {
+    east: -Sin(lon0) * dx + Cos(lon0) * dy,
+    north: -Sin(lat0) * Cos(lon0) * dx - Sin(lat0) * Sin(lon0) * dy + Cos(lat0) * dz
+  };
+}
+
+function Project4326To5817(longitude, latitude) {
+  if (
+    IsEmpty(controlLongitude1) || IsEmpty(controlLatitude1) ||
+    IsEmpty(controlX1) || IsEmpty(controlY1) ||
+    IsEmpty(controlLongitude2) || IsEmpty(controlLatitude2) ||
+    IsEmpty(controlX2) || IsEmpty(controlY2)
+  ) {
+    return null;
+  }
+
+  var sourcePoint = GeodeticToLocalEastNorth(longitude, latitude, controlLongitude1, controlLatitude1);
+  var sourceControl2 = GeodeticToLocalEastNorth(controlLongitude2, controlLatitude2, controlLongitude1, controlLatitude1);
+
+  var sourceDeltaEast = sourceControl2.east;
+  var sourceDeltaNorth = sourceControl2.north;
+  var targetDeltaX = controlX2 - controlX1;
+  var targetDeltaY = controlY2 - controlY1;
+  var denominator = Pow(sourceDeltaEast, 2) + Pow(sourceDeltaNorth, 2);
+
+  if (denominator == 0) return null;
+
+  // Two-dimensional similarity transform from local east/north metres to plant x/y metres.
+  var a = (targetDeltaX * sourceDeltaEast + targetDeltaY * sourceDeltaNorth) / denominator;
+  var b = (targetDeltaY * sourceDeltaEast - targetDeltaX * sourceDeltaNorth) / denominator;
+
+  return Point({
+    x: controlX1 + a * sourcePoint.east - b * sourcePoint.north,
+    y: controlY1 + b * sourcePoint.east + a * sourcePoint.north,
+    spatialReference: { wkid: 5817 }
+  });
+}
+
+var geometry = Geometry($feature);
+if (IsEmpty(geometry)) return null;
+
+// EPSG:4326 coordinates are longitude (x), latitude (y).
+return Project4326To5817(geometry.x, geometry.y);

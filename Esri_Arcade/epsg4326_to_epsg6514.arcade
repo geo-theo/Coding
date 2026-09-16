@@ -1,0 +1,57 @@
+// Converts point geometry from EPSG:4326 longitude/latitude to EPSG:6514.
+// EPSG:6514 is NAD83(2011) / Montana, meters, Lambert Conformal Conic 2SP.
+// WGS 84 and NAD83(2011) are treated as coincident here, matching the common
+// zero-parameter transformation used for many mapping workflows.
+
+function ToRadians(degrees) {
+  return degrees * PI / 180;
+}
+
+function LccM(phi, eccentricity) {
+  var sinPhi = Sin(phi);
+  return Cos(phi) / Sqrt(1 - Pow(eccentricity, 2) * Pow(sinPhi, 2));
+}
+
+function LccT(phi, eccentricity) {
+  var eccentricitySinPhi = eccentricity * Sin(phi);
+  var ratio = (1 - eccentricitySinPhi) / (1 + eccentricitySinPhi);
+  return Tan(PI / 4 - phi / 2) / Pow(ratio, eccentricity / 2);
+}
+
+function Project4326To6514(longitude, latitude) {
+  var semiMajorAxis = 6378137;
+  var inverseFlattening = 298.257222101;
+  var flattening = 1 / inverseFlattening;
+  var eccentricity = Sqrt(2 * flattening - Pow(flattening, 2));
+
+  var latitudeOfOrigin = ToRadians(44.25);
+  var centralMeridian = ToRadians(-109.5);
+  var standardParallel1 = ToRadians(49);
+  var standardParallel2 = ToRadians(45);
+  var falseEasting = 600000;
+  var falseNorthing = 0;
+
+  var m1 = LccM(standardParallel1, eccentricity);
+  var m2 = LccM(standardParallel2, eccentricity);
+  var t1 = LccT(standardParallel1, eccentricity);
+  var t2 = LccT(standardParallel2, eccentricity);
+  var t0 = LccT(latitudeOfOrigin, eccentricity);
+
+  var n = (Log(m1) - Log(m2)) / (Log(t1) - Log(t2));
+  var f = m1 / (n * Pow(t1, n));
+  var rho = semiMajorAxis * f * Pow(LccT(ToRadians(latitude), eccentricity), n);
+  var rho0 = semiMajorAxis * f * Pow(t0, n);
+  var theta = n * (ToRadians(longitude) - centralMeridian);
+
+  return Point({
+    x: falseEasting + rho * Sin(theta),
+    y: falseNorthing + rho0 - rho * Cos(theta),
+    spatialReference: { wkid: 6514 }
+  });
+}
+
+var geometry = Geometry($feature);
+if (IsEmpty(geometry)) return null;
+
+// EPSG:4326 coordinates are longitude (x), latitude (y).
+return Project4326To6514(geometry.x, geometry.y);
