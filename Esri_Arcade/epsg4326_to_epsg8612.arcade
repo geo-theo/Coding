@@ -1,0 +1,51 @@
+// EPSG:8612 is not a coordinate reference system. It is a coordinate operation:
+// "NAD27 to WGS 84 (59)", from EPSG:4267 to EPSG:4326.
+//
+// To use EPSG:8612 in reverse, from EPSG:4326 WGS 84 back to NAD27, you need
+// the local NADCON grid shifts for the feature location. Arcade cannot read or
+// interpolate the required grid files directly, so enter precomputed shift
+// values below. Shift values are in arc-seconds, positive in the forward
+// EPSG:8612 direction: NAD27 -> NAD83 -> WGS 84.
+
+// NAD27 to NAD83 CONUS grid shift at this location.
+var nad27ToNad83LongitudeShiftSeconds = null;
+var nad27ToNad83LatitudeShiftSeconds = null;
+
+// NAD83 to WGS 84 HPGN grid shift at this location.
+var nad83ToWgs84LongitudeShiftSeconds = null;
+var nad83ToWgs84LatitudeShiftSeconds = null;
+
+function SecondsToDegrees(seconds) {
+  return seconds / 3600;
+}
+
+function InverseEpsg8612(longitude, latitude) {
+  if (
+    IsEmpty(nad27ToNad83LongitudeShiftSeconds) ||
+    IsEmpty(nad27ToNad83LatitudeShiftSeconds) ||
+    IsEmpty(nad83ToWgs84LongitudeShiftSeconds) ||
+    IsEmpty(nad83ToWgs84LatitudeShiftSeconds)
+  ) {
+    return null;
+  }
+
+  // Reverse the forward operation steps:
+  // WGS 84 -> NAD83, then NAD83 -> NAD27.
+  var nad83Longitude = longitude - SecondsToDegrees(nad83ToWgs84LongitudeShiftSeconds);
+  var nad83Latitude = latitude - SecondsToDegrees(nad83ToWgs84LatitudeShiftSeconds);
+
+  var nad27Longitude = nad83Longitude - SecondsToDegrees(nad27ToNad83LongitudeShiftSeconds);
+  var nad27Latitude = nad83Latitude - SecondsToDegrees(nad27ToNad83LatitudeShiftSeconds);
+
+  return Point({
+    x: nad27Longitude,
+    y: nad27Latitude,
+    spatialReference: { wkid: 4267 }
+  });
+}
+
+var geometry = Geometry($feature);
+if (IsEmpty(geometry)) return null;
+
+// EPSG:4326 coordinates are longitude (x), latitude (y).
+return InverseEpsg8612(geometry.x, geometry.y);

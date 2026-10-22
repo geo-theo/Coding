@@ -1,0 +1,87 @@
+// Converts point geometry from EPSG:4326 longitude/latitude to EPSG:2022.
+// EPSG:2022 is NAD27(76) / MTM zone 13, meters, Transverse Mercator.
+//
+// The official WGS 84 to NAD27(76) transformation uses the May76v20 NTv2
+// grid. Arcade cannot read NTv2 grid files directly, so provide a local
+// datum shift here when accuracy better than the zero-shift approximation is
+// required. Shifts are NAD27(76) minus WGS 84, in arc-seconds.
+var nad27_76LongitudeShiftSeconds = 0;
+var nad27_76LatitudeShiftSeconds = 0;
+
+function ToRadians(degrees) {
+  return degrees * PI / 180;
+}
+
+function Project4326To2022(longitude, latitude) {
+  // Clarke 1866 ellipsoid used by the NAD27(76) geographic CRS.
+  var semiMajorAxis = 6378206.4;
+  var inverseFlattening = 294.978698213898;
+  var flattening = 1 / inverseFlattening;
+  var eccentricitySquared = flattening * (2 - flattening);
+  var secondEccentricitySquared = eccentricitySquared / (1 - eccentricitySquared);
+
+  // MTM zone 13 projection parameters from EPSG:2022.
+  var latitudeOfOrigin = ToRadians(0);
+  var centralMeridian = ToRadians(-84);
+  var scaleFactor = 0.9999;
+  var falseEasting = 304800;
+  var falseNorthing = 0;
+
+  // Approximate the grid transformation with a supplied local shift.
+  var nad27Longitude = ToRadians(longitude + nad27_76LongitudeShiftSeconds / 3600);
+  var nad27Latitude = ToRadians(latitude + nad27_76LatitudeShiftSeconds / 3600);
+
+  var sinLatitude = Sin(nad27Latitude);
+  var cosLatitude = Cos(nad27Latitude);
+  var tanLatitude = Tan(nad27Latitude);
+  var radiusOfCurvature = semiMajorAxis / Sqrt(
+    1 - eccentricitySquared * Pow(sinLatitude, 2)
+  );
+  var tangentSquared = Pow(tanLatitude, 2);
+  var cosineSquared = Pow(cosLatitude, 2);
+  var c = secondEccentricitySquared * cosineSquared;
+  var a = cosLatitude * (nad27Longitude - centralMeridian);
+
+  var meridionalArc = semiMajorAxis * (
+    (1 - eccentricitySquared / 4 - 3 * Pow(eccentricitySquared, 2) / 64 -
+      5 * Pow(eccentricitySquared, 3) / 256) * nad27Latitude -
+    (3 * eccentricitySquared / 8 + 3 * Pow(eccentricitySquared, 2) / 32 +
+      45 * Pow(eccentricitySquared, 3) / 1024) * Sin(2 * nad27Latitude) +
+    (15 * Pow(eccentricitySquared, 2) / 256 +
+      45 * Pow(eccentricitySquared, 3) / 1024) * Sin(4 * nad27Latitude) -
+    (35 * Pow(eccentricitySquared, 3) / 3072) * Sin(6 * nad27Latitude)
+  );
+
+  var meridionalArcAtOrigin = semiMajorAxis * (
+    (1 - eccentricitySquared / 4 - 3 * Pow(eccentricitySquared, 2) / 64 -
+      5 * Pow(eccentricitySquared, 3) / 256) * latitudeOfOrigin
+  );
+
+  var easting = falseEasting + scaleFactor * radiusOfCurvature * (
+    a +
+    (1 - tangentSquared + c) * Pow(a, 3) / 6 +
+    (5 - 18 * tangentSquared + Pow(tangentSquared, 2) + 72 * c -
+      58 * secondEccentricitySquared) * Pow(a, 5) / 120
+  );
+
+  var northing = falseNorthing + scaleFactor * (
+    meridionalArc - meridionalArcAtOrigin + radiusOfCurvature * tanLatitude * (
+      Pow(a, 2) / 2 +
+      (5 - tangentSquared + 9 * c + 4 * Pow(c, 2)) * Pow(a, 4) / 24 +
+      (61 - 58 * tangentSquared + Pow(tangentSquared, 2) + 600 * c -
+        330 * secondEccentricitySquared) * Pow(a, 6) / 720
+    )
+  );
+
+  return Point({
+    x: easting,
+    y: northing,
+    spatialReference: { wkid: 2022 }
+  });
+}
+
+var geometry = Geometry($feature);
+if (IsEmpty(geometry)) return null;
+
+// EPSG:4326 coordinates are longitude (x), latitude (y).
+return Project4326To2022(geometry.x, geometry.y);

@@ -1,0 +1,98 @@
+// Converts point geometry from EPSG:4326 longitude/latitude to EPSG:3556.
+// EPSG:3556 is NAD83(NSRS2007) / Maine CS2000 West, meters,
+// Transverse Mercator.
+//
+// EPSG defines the WGS 84 to NAD83(NSRS2007) relationship as a zero-parameter
+// approximation for this CRS. Optional local shifts can be supplied in
+// arc-seconds if a project-specific adjustment is required.
+var nad83_nsrs2007LongitudeShiftSeconds = 0;
+var nad83_nsrs2007LatitudeShiftSeconds = 0;
+
+function ToRadians(degrees) {
+  return degrees * PI / 180;
+}
+
+function MeridionalArc(phi, semiMajorAxis, eccentricitySquared) {
+  return semiMajorAxis * (
+    (1 - eccentricitySquared / 4 - 3 * Pow(eccentricitySquared, 2) / 64 -
+      5 * Pow(eccentricitySquared, 3) / 256) * phi -
+    (3 * eccentricitySquared / 8 + 3 * Pow(eccentricitySquared, 2) / 32 +
+      45 * Pow(eccentricitySquared, 3) / 1024) * Sin(2 * phi) +
+    (15 * Pow(eccentricitySquared, 2) / 256 +
+      45 * Pow(eccentricitySquared, 3) / 1024) * Sin(4 * phi) -
+    (35 * Pow(eccentricitySquared, 3) / 3072) * Sin(6 * phi)
+  );
+}
+
+function Project4326To3556(longitude, latitude) {
+  // GRS 1980 ellipsoid used by NAD83(NSRS2007).
+  var semiMajorAxis = 6378137;
+  var inverseFlattening = 298.257222101;
+  var flattening = 1 / inverseFlattening;
+  var eccentricitySquared = flattening * (2 - flattening);
+  var secondEccentricitySquared = eccentricitySquared / (1 - eccentricitySquared);
+
+  // Maine CS2000 West projection parameters from EPSG:3556.
+  var latitudeOfOrigin = ToRadians(42.8333333333333);
+  var centralMeridian = ToRadians(-70.375);
+  var scaleFactor = 0.99998;
+  var falseEasting = 300000;
+  var falseNorthing = 0;
+
+  var adjustedLongitude = ToRadians(
+    longitude + nad83_nsrs2007LongitudeShiftSeconds / 3600
+  );
+  var adjustedLatitude = ToRadians(
+    latitude + nad83_nsrs2007LatitudeShiftSeconds / 3600
+  );
+
+  var sinLatitude = Sin(adjustedLatitude);
+  var cosLatitude = Cos(adjustedLatitude);
+  var tanLatitude = Tan(adjustedLatitude);
+  var radiusOfCurvature = semiMajorAxis / Sqrt(
+    1 - eccentricitySquared * Pow(sinLatitude, 2)
+  );
+  var tangentSquared = Pow(tanLatitude, 2);
+  var cosineSquared = Pow(cosLatitude, 2);
+  var c = secondEccentricitySquared * cosineSquared;
+  var a = cosLatitude * (adjustedLongitude - centralMeridian);
+
+  var meridionalArc = MeridionalArc(
+    adjustedLatitude,
+    semiMajorAxis,
+    eccentricitySquared
+  );
+  var meridionalArcAtOrigin = MeridionalArc(
+    latitudeOfOrigin,
+    semiMajorAxis,
+    eccentricitySquared
+  );
+
+  var easting = falseEasting + scaleFactor * radiusOfCurvature * (
+    a +
+    (1 - tangentSquared + c) * Pow(a, 3) / 6 +
+    (5 - 18 * tangentSquared + Pow(tangentSquared, 2) + 72 * c -
+      58 * secondEccentricitySquared) * Pow(a, 5) / 120
+  );
+
+  var northing = falseNorthing + scaleFactor * (
+    meridionalArc - meridionalArcAtOrigin + radiusOfCurvature * tanLatitude * (
+      Pow(a, 2) / 2 +
+      (5 - tangentSquared + 9 * c + 4 * Pow(c, 2)) * Pow(a, 4) / 24 +
+      (61 - 58 * tangentSquared + Pow(tangentSquared, 2) + 600 * c -
+        330 * secondEccentricitySquared) * Pow(a, 6) / 720
+    )
+  );
+
+  return Point({
+    x: easting,
+    y: northing,
+    spatialReference: { wkid: 3556 }
+  });
+}
+
+var geometry = Geometry($feature);
+if (IsEmpty(geometry)) return null;
+
+// EPSG:4326 coordinates are longitude (x), latitude (y).
+return Project4326To3556(geometry.x, geometry.y);
